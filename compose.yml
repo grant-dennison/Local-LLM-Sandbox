@@ -1,0 +1,68 @@
+services:
+  init-convert-hf-to-gguf:
+    image: ghcr.io/ggml-org/llama.cpp:full
+    volumes:
+      - ./gguf:/gguf
+      - ./hf-models.txt:/hf-models.txt:ro
+      - ./scripts:/scripts:ro
+    environment:
+      GGUF_DIR: /gguf
+    entrypoint: >
+      bash -c '/scripts/download-ggufs.sh < <(tr -d "\r" < /hf-models.txt)'
+
+  init-load-gguf-to-ollama:
+    image: ollama/ollama
+    depends_on:
+      init-convert-hf-to-gguf:
+        condition: service_completed_successfully
+    volumes:
+      - ./gguf:/gguf
+      - ollama_data:/root/.ollama
+      - ./hf-models.txt:/hf-models.txt:ro
+      - ./ollama-models.txt:/ollama-models.txt:ro
+      - ./scripts:/scripts:ro
+    environment:
+      GGUF_DIR: /gguf
+    entrypoint: >
+      bash -c '
+        set -e
+        ollama serve &
+
+        /scripts/ollama-import-ggufs.sh < <(tr -d "\r" < /hf-models.txt)
+        /scripts/ollama-pull.sh < <(tr -d "\r" < /ollama-models.txt)
+
+        ollama ls
+      '
+
+  ollama-server:
+    image: ollama/ollama
+    container_name: ollama
+    depends_on:
+      init-load-gguf-to-ollama:
+        condition: service_completed_successfully
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+
+  # open-webui:
+  #   image: ghcr.io/open-webui/open-webui:main
+  #   container_name: open-webui
+  #   volumes:
+  #     - open-webui:/app/backend/data
+  #   depends_on:
+  #     - ollama-server
+  #   ports:
+  #     - ${OPEN_WEBUI_PORT-3000}:8080
+  #   environment:
+  #     - 'OLLAMA_BASE_URL=http://ollama:11434'
+  #     - 'WEBUI_SECRET_KEY='
+  #   # extra_hosts:
+  #   #   - host.docker.internal:host-gateway
+  #   restart: unless-stopped
+
+volumes:
+  gguf_files:
+  ollama_data:
+  open-webui:
