@@ -45,6 +45,23 @@ services:
       - ./web-ui/nginx.conf:/etc/nginx/nginx.conf:ro
     restart: unless-stopped
 
+  ollama-tunnel:
+    profiles: [tunnel]
+    networks:
+      - ollama
+      - host-network
+    image: python
+    volumes:
+      - ./.ssh:/config-ro/.ssh:ro
+    entrypoint: >
+      sh -c "
+        set -ex
+        cp -r /config-ro /config
+        chmod 600 /config/.ssh/*
+        ssh -o StrictHostKeyChecking=no -N -R 0.0.0.0:11434:ollama-server:11434 -F /config/.ssh/config ollama-consumer
+      "
+    restart: unless-stopped
+
   ollama-pull:
     profiles: [manual]
     networks:

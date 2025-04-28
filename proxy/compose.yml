@@ -17,6 +17,8 @@ services:
 networks:
   # Network for actually getting stuff from the internet or dev host network.
   host-network:
+  # This network does not have internet access.
   ollama:
+    # This name matches the one in the `core` compose file to make aider usage homogenous.
     name: ollama
     internal: true
