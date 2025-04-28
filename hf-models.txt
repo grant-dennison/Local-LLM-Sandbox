@@ -1,2 +1,0 @@
-Qwen/Qwen2.5-Coder-0.5B q8_0
-Qwen/Qwen2.5-Coder-0.5B-Instruct q8_0

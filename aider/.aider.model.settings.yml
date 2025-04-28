@@ -1,0 +1,6 @@
+- name: ollama_chat/qwen2.5-coder:0.5b
+  edit_format: diff
+  weak_model_name: ollama_chat/qwen2.5-coder:0.5b
+  use_repo_map: true
+  editor_model_name: ollama_chat/qwen2.5-coder:0.5b
+  editor_edit_format: editor-diff

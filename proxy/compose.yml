@@ -1,0 +1,22 @@
+name: local-ai-proxy
+
+services:
+  ollama-proxy:
+    hostname: ollama-server
+    networks:
+      - ollama
+      - host-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    image: nginx
+    environment:
+      OLLAMA_HOST: ${OLLAMA_HOST:?OLLAMA_HOST must be set}
+    volumes:
+      - ./nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+
+networks:
+  # Network for actually getting stuff from the internet or dev host network.
+  host-network:
+  ollama:
+    name: ollama
+    internal: true

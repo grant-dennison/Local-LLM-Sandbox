@@ -1,0 +1,102 @@
+name: local-ai-core
+
+services:
+  ollama-server-cpu-only: &ollama-server-cpu-only
+    profiles: [cpu-only]
+    networks:
+      - ollama
+    hostname: ollama-server
+    image: ollama/ollama
+    container_name: ollama
+    volumes:
+      - ollama-data:/root/.ollama:ro
+    restart: unless-stopped
+    environment:
+      # Recommended for aider: https://aider.chat/docs/llms/ollama.html
+      OLLAMA_CONTEXT_LENGTH: 8192
+
+  ollama-server-gpu:
+    <<: *ollama-server-cpu-only
+    profiles: [gpu]
+    gpus: all
+
+  ollama-proxy:
+    profiles: [proxy]
+    networks:
+      - ollama
+      - host-network
+    ports:
+      - "11434:11434"
+    image: nginx
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+
+  ollama-web-ui:
+    profiles: [web-ui]
+    networks:
+      - ollama
+      - host-network
+    ports:
+      - "11380:80"
+    image: nginx
+    volumes:
+      - ./web-ui/index.html:/usr/share/nginx/html/index.html:ro
+      - ./web-ui/nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+
+  ollama-pull:
+    profiles: [manual]
+    networks:
+      - host-network
+    image: ollama/ollama
+    # entrypoint: ["ollama", "pull"]
+    volumes:
+      - ollama-data:/root/.ollama:rw
+    entrypoint: >
+      bash -c "
+        ollama serve &
+        sleep 2
+        ollama pull \"$${0}\""
+    command: []
+
+  download-hf-as-gguf:
+    profiles: [manual]
+    image: ghcr.io/ggml-org/llama.cpp:full
+    volumes:
+      - ./gguf:/scripts:ro
+      - ./models/gguf:/gguf:rw
+      - ./models/hf:/hf:rw
+    environment:
+      GGUF_DIR: /gguf
+      HF_DIR: /hf
+    entrypoint: >
+      bash -c "/scripts/download-hf-as-gguf.sh \"$${0}\" \"$${1:-}\""
+
+  import-gguf:
+    profiles: [manual]
+    image: ollama/ollama
+    volumes:
+      - ollama-data:/root/.ollama:rw
+      - ./gguf:/scripts:ro
+      - ./models/gguf:/gguf:ro
+    environment:
+      GGUF_DIR: /gguf
+    entrypoint: >
+      bash -c "
+        set -e
+        ollama serve &
+        /scripts/ollama-import-gguf.sh \"$${0}\" \"$${1:-}\"
+        ollama ls
+      "
+
+networks:
+  # Network for actually getting stuff from the internet or dev host network.
+  host-network:
+  # This network does not have internet access.
+  ollama:
+    name: ollama
+    internal: true
+
+volumes:
+  ollama-data:
