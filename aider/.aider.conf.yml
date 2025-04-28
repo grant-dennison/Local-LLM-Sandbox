@@ -1,0 +1,9 @@
+# See https://aider.chat/docs/config/aider_conf.html
+read:
+  - README.md
+model: ollama_chat/qwen2.5-coder:0.5b
+watch-files: true
+analytics: false
+check-update: false
+set-env:
+  - OLLAMA_API_BASE=http://ollama-server:11434
